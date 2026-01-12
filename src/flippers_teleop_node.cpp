@@ -102,7 +102,7 @@ private:
   double rl_scale_;
   double rr_scale_;
   std::string joy_topic_ = "~/joy";
-  std::string flippers_topic_ = "~/bool";
+  std::string flippers_topic_ = "~/flippers";
 
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr sub_;
   rclcpp::Publisher<capra_control_msgs::msg::Flippers>::SharedPtr pub_;
