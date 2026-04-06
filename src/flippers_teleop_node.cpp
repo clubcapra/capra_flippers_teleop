@@ -1,6 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <capra_control_msgs/msg/flippers.hpp>
+#include <capra_control_msgs/msg/flippers_stamped.hpp>
 
 class FlippersTeleop : public rclcpp::Node
 {
@@ -16,9 +17,14 @@ public:
     fr_scale_ = this->declare_parameter<double>("fr_scale", 1.0);
     rl_scale_ = this->declare_parameter<double>("rl_scale", 1.0);
     rr_scale_ = this->declare_parameter<double>("rr_scale", 1.0);
+    publish_stamped_ = this->declare_parameter<bool>("publish_stamped", false);
 
     // Publisher
-    pub_ = this->create_publisher<capra_control_msgs::msg::Flippers>(flippers_topic_, 10);
+    if (publish_stamped_) {
+      pub_stamped_ = this->create_publisher<capra_control_msgs::msg::FlippersStamped>(flippers_topic_, 10);
+    } else {
+      pub_ = this->create_publisher<capra_control_msgs::msg::Flippers>(flippers_topic_, 10);
+    }
 
     // Subscriber
     sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
@@ -87,7 +93,14 @@ private:
       // Don't publish if all velocities == 0 except for the first time they go from != 0 to == 0.
       // Publish anytime the velocities != 0
       // This allows the flippers_mux to select another input if the user isn't controlling them manually
-      pub_->publish(out);
+      if (publish_stamped_) {
+        capra_control_msgs::msg::FlippersStamped stamped_out;
+        stamped_out.header.stamp = msg->header.stamp;
+        stamped_out.flippers = out;
+        pub_stamped_->publish(stamped_out);
+      } else {
+        pub_->publish(out);
+      }
     }
     last_ = out;
   }
@@ -101,11 +114,13 @@ private:
   double fr_scale_;
   double rl_scale_;
   double rr_scale_;
+  bool publish_stamped_;
   std::string joy_topic_ = "~/joy";
   std::string flippers_topic_ = "~/flippers";
 
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr sub_;
   rclcpp::Publisher<capra_control_msgs::msg::Flippers>::SharedPtr pub_;
+  rclcpp::Publisher<capra_control_msgs::msg::FlippersStamped>::SharedPtr pub_stamped_;
 };
 
 int main(int argc, char **argv)
